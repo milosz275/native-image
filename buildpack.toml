@@ -64,6 +64,11 @@ arch = "arm64"
     description = "a file with arguments to pass to the native-image command"
     build       = true
 
+  [[metadata.configurations]]
+    name        = "BP_NATIVE_IMAGE_INCLUDE_FILES"
+    description = "colon-separated list of glob patterns for top-level files or directories to preserve during bytecode removal"
+    build       = true
+
 [[stacks]]
   id = "*"
 
