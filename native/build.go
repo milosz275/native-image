@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/paketo-buildpacks/libpak/sherpa"
 
@@ -111,15 +110,8 @@ func (b Build) Build(context libcnb.BuildContext) (libcnb.BuildResult, error) {
 		}
 	}
 
-	includeFiles, err := resolveGlobPatterns(cr, ConfigIncludeFiles)
-	if err != nil {
-		return libcnb.BuildResult{}, err
-	}
-
-	excludeFiles, err := resolveGlobPatterns(cr, ConfigExcludeFiles)
-	if err != nil {
-		return libcnb.BuildResult{}, err
-	}
+	includeFiles, _ := cr.Resolve(ConfigIncludeFiles)
+	excludeFiles, _ := cr.Resolve(ConfigExcludeFiles)
 
 	compressor, ok := cr.Resolve(BinaryCompressionMethod)
 	if !ok {
@@ -191,28 +183,3 @@ func findStartOrMainClass(manifest *properties.Properties, appPath, jarFilePatte
 	return "", fmt.Errorf("unable to find a suitable startClass")
 }
 
-func resolveGlobPatterns(cr libpak.ConfigurationResolver, configKey string) ([]string, error) {
-	value, ok := cr.Resolve(configKey)
-	if !ok || value == "" {
-		return nil, nil
-	}
-
-	var patterns []string
-	for _, pattern := range strings.Split(value, ":") {
-		pattern = strings.TrimSpace(pattern)
-		if pattern == "" {
-			continue
-		}
-
-		if strings.Contains(pattern, "/") || (os.PathSeparator != '/' && strings.Contains(pattern, string(os.PathSeparator))) {
-			return nil, fmt.Errorf("glob pattern in %s contains a path separator: %q; only top-level application directory entry names are matched", configKey, pattern)
-		}
-
-		if _, err := filepath.Match(pattern, ""); err != nil {
-			return nil, fmt.Errorf("invalid glob pattern in %s: %s\n%w", configKey, pattern, err)
-		}
-		patterns = append(patterns, pattern)
-	}
-
-	return patterns, nil
-}
