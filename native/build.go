@@ -204,6 +204,10 @@ func resolveGlobPatterns(cr libpak.ConfigurationResolver, configKey string) ([]s
 			continue
 		}
 
+		if strings.Contains(pattern, "/") || (os.PathSeparator != '/' && strings.Contains(pattern, string(os.PathSeparator))) {
+			return nil, fmt.Errorf("glob pattern in %s contains a path separator: %q; only top-level application directory entry names are matched", configKey, pattern)
+		}
+
 		if _, err := filepath.Match(pattern, ""); err != nil {
 			return nil, fmt.Errorf("invalid glob pattern in %s: %s\n%w", configKey, pattern, err)
 		}

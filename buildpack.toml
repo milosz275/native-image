@@ -67,13 +67,13 @@ arch = "arm64"
   [[metadata.configurations]]
     name        = "BP_INCLUDE_FILES"
     default     = ""
-    description = "colon separated list of glob patterns, matched source files are included"
+    description = "colon-separated list of glob patterns to preserve top-level entries in the application directory during bytecode removal. Patterns must not contain path separators."
     build       = true
 
   [[metadata.configurations]]
     name        = "BP_EXCLUDE_FILES"
     default     = ""
-    description = "colon separated list of glob patterns, matched source files are removed"
+    description = "colon-separated list of glob patterns to exclude from the set matched by BP_INCLUDE_FILES. Has no effect unless BP_INCLUDE_FILES is also set. Patterns must not contain path separators."
     build       = true
 
 [[stacks]]

@@ -291,6 +291,40 @@ Start-Class: test-start-class
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("BP_EXCLUDE_FILES"))
 		})
+
+		it("returns error for include pattern containing path separator", func() {
+			t.Setenv("BP_INCLUDE_FILES", "dynatrace/**")
+
+			Expect(os.WriteFile(filepath.Join(ctx.Application.Path, "META-INF", "MANIFEST.MF"), []byte(`
+Spring-Boot-Version: 1.1.1
+Spring-Boot-Classes: BOOT-INF/classes
+Spring-Boot-Lib: BOOT-INF/lib
+Spring-Boot-Layers-Index: layers.idx
+Start-Class: test-start-class
+`), 0644)).To(Succeed())
+
+			_, err := build.Build(ctx)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("contains a path separator"))
+			Expect(err.Error()).To(ContainSubstring("BP_INCLUDE_FILES"))
+		})
+
+		it("returns error for exclude pattern containing path separator", func() {
+			t.Setenv("BP_EXCLUDE_FILES", "logs/debug.log")
+
+			Expect(os.WriteFile(filepath.Join(ctx.Application.Path, "META-INF", "MANIFEST.MF"), []byte(`
+Spring-Boot-Version: 1.1.1
+Spring-Boot-Classes: BOOT-INF/classes
+Spring-Boot-Lib: BOOT-INF/lib
+Spring-Boot-Layers-Index: layers.idx
+Start-Class: test-start-class
+`), 0644)).To(Succeed())
+
+			_, err := build.Build(ctx)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("contains a path separator"))
+			Expect(err.Error()).To(ContainSubstring("BP_EXCLUDE_FILES"))
+		})
 	})
 
 	context("BP_NATIVE_IMAGE_BUILT_ARTIFACT", func() {
