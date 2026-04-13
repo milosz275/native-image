@@ -236,6 +236,31 @@ Start-Class: test-start-class
 		})
 	})
 
+	context("BP_INCLUDE_FILES and BP_EXCLUDE_FILES", func() {
+		it.Before(func() {
+			t.Setenv("BP_INCLUDE_FILES", "dynatrace:*.conf")
+			t.Setenv("BP_EXCLUDE_FILES", "*.tmp")
+		})
+
+		it("resolves source removal patterns and passes them to NativeImage", func() {
+			Expect(os.WriteFile(filepath.Join(ctx.Application.Path, "META-INF", "MANIFEST.MF"), []byte(`
+Spring-Boot-Version: 1.1.1
+Spring-Boot-Classes: BOOT-INF/classes
+Spring-Boot-Lib: BOOT-INF/lib
+Spring-Boot-Layers-Index: layers.idx
+Start-Class: test-start-class
+`), 0644)).To(Succeed())
+
+			result, err := build.Build(ctx)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(result.Layers[0].(native.NativeImage).IncludeFiles).To(Equal("dynatrace:*.conf"))
+			Expect(result.Layers[0].(native.NativeImage).IncludeFilesSet).To(BeTrue())
+			Expect(result.Layers[0].(native.NativeImage).ExcludeFiles).To(Equal("*.tmp"))
+			Expect(result.Layers[0].(native.NativeImage).ExcludeFilesSet).To(BeTrue())
+		})
+	})
+
 	context("BP_NATIVE_IMAGE_BUILT_ARTIFACT", func() {
 		it.Before(func() {
 			Expect(os.Setenv("BP_NATIVE_IMAGE_BUILT_ARTIFACT", "target/*.jar")).To(Succeed())

@@ -25,6 +25,7 @@ import (
 	"strings"
 
 	"github.com/paketo-buildpacks/native-image/v5/native/slices"
+	"github.com/paketo-buildpacks/source-removal/logic"
 
 	"github.com/buildpacks/libcnb"
 	"github.com/magiconair/properties"
@@ -39,6 +40,10 @@ type NativeImage struct {
 	Arguments       string
 	ArgumentsFile   string
 	Executor        effect.Executor
+	IncludeFiles    string
+	IncludeFilesSet bool
+	ExcludeFiles    string
+	ExcludeFilesSet bool
 	JarFilePattern  string
 	Logger          bard.Logger
 	Manifest        *properties.Properties
@@ -46,12 +51,16 @@ type NativeImage struct {
 	Compressor      string
 }
 
-func NewNativeImage(applicationPath string, arguments string, argumentsFile string, compressor string, jarFilePattern string, manifest *properties.Properties, stackID string) (NativeImage, error) {
+func NewNativeImage(applicationPath string, arguments string, argumentsFile string, compressor string, includeFiles string, includeFilesSet bool, excludeFiles string, excludeFilesSet bool, jarFilePattern string, manifest *properties.Properties, stackID string) (NativeImage, error) {
 	return NativeImage{
 		ApplicationPath: applicationPath,
 		Arguments:       arguments,
 		ArgumentsFile:   argumentsFile,
 		Executor:        effect.NewExecutor(),
+		IncludeFiles:    includeFiles,
+		IncludeFilesSet: includeFilesSet,
+		ExcludeFiles:    excludeFiles,
+		ExcludeFilesSet: excludeFilesSet,
 		JarFilePattern:  jarFilePattern,
 		Manifest:        manifest,
 		StackID:         stackID,
@@ -86,10 +95,12 @@ func (n NativeImage) Contribute(layer libcnb.Layer) (libcnb.Layer, error) {
 	nativeBinaryHash := fmt.Sprintf("%x", sha256.Sum256(buf.Bytes()))
 
 	contributor := libpak.NewLayerContributor("Native Image", map[string]interface{}{
-		"files":        files,
-		"arguments":    arguments,
-		"compression":  n.Compressor,
-		"version-hash": nativeBinaryHash,
+		"files":         files,
+		"arguments":     arguments,
+		"compression":   n.Compressor,
+		"version-hash":  nativeBinaryHash,
+		"include-files": n.IncludeFiles,
+		"exclude-files": n.ExcludeFiles,
 	}, libcnb.LayerTypes{
 		Cache: true,
 	})
@@ -142,14 +153,31 @@ func (n NativeImage) Contribute(layer libcnb.Layer) (libcnb.Layer, error) {
 	}
 
 	n.Logger.Header("Removing bytecode")
-	cs, err := os.ReadDir(n.ApplicationPath)
-	if err != nil {
-		return libcnb.Layer{}, fmt.Errorf("unable to list children of %s\n%w", n.ApplicationPath, err)
+
+	if n.IncludeFiles != "" {
+		n.Logger.Bodyf("Preserving files matching: %s", n.IncludeFiles)
+		if err := logic.Include(n.ApplicationPath, n.IncludeFiles); err != nil {
+			return libcnb.Layer{}, fmt.Errorf("unable to apply include patterns\n%w", err)
+		}
 	}
-	for _, c := range cs {
-		file := filepath.Join(n.ApplicationPath, c.Name())
-		if err := os.RemoveAll(file); err != nil {
-			return libcnb.Layer{}, fmt.Errorf("unable to remove %s\n%w", file, err)
+
+	if n.ExcludeFiles != "" {
+		n.Logger.Bodyf("Excluding files matching: %s", n.ExcludeFiles)
+		if err := logic.Exclude(n.ApplicationPath, n.ExcludeFiles); err != nil {
+			return libcnb.Layer{}, fmt.Errorf("unable to apply exclude patterns\n%w", err)
+		}
+	}
+
+	if n.IncludeFiles == "" && n.ExcludeFiles == "" && !n.IncludeFilesSet && !n.ExcludeFilesSet {
+		cs, err := os.ReadDir(n.ApplicationPath)
+		if err != nil {
+			return libcnb.Layer{}, fmt.Errorf("unable to list children of %s\n%w", n.ApplicationPath, err)
+		}
+		for _, c := range cs {
+			file := filepath.Join(n.ApplicationPath, c.Name())
+			if err := os.RemoveAll(file); err != nil {
+				return libcnb.Layer{}, fmt.Errorf("unable to remove %s\n%w", file, err)
+			}
 		}
 	}
 
@@ -210,6 +238,7 @@ func (n NativeImage) ProcessArguments(layer libcnb.Layer) ([]string, string, err
 func (NativeImage) Name() string {
 	return "native-image"
 }
+
 
 // copy the main file & any `*.so` files also in the layer to the application path
 func copyFilesFromLayer(layerPath string, execName string, appPath string) error {

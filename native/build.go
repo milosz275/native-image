@@ -110,6 +110,9 @@ func (b Build) Build(context libcnb.BuildContext) (libcnb.BuildResult, error) {
 		}
 	}
 
+	includeFiles, includeFilesSet := cr.Resolve(ConfigIncludeFiles)
+	excludeFiles, excludeFilesSet := cr.Resolve(ConfigExcludeFiles)
+
 	compressor, ok := cr.Resolve(BinaryCompressionMethod)
 	if !ok {
 		compressor = CompressorNone
@@ -120,7 +123,7 @@ func (b Build) Build(context libcnb.BuildContext) (libcnb.BuildResult, error) {
 		}
 	}
 
-	n, err := NewNativeImage(context.Application.Path, args, argsFile, compressor, jarFilePattern, manifest, context.StackID)
+	n, err := NewNativeImage(context.Application.Path, args, argsFile, compressor, includeFiles, includeFilesSet, excludeFiles, excludeFilesSet, jarFilePattern, manifest, context.StackID)
 	if err != nil {
 		return libcnb.BuildResult{}, fmt.Errorf("unable to create native image layer\n%w", err)
 	}
@@ -179,3 +182,4 @@ func findStartOrMainClass(manifest *properties.Properties, appPath, jarFilePatte
 
 	return "", fmt.Errorf("unable to find a suitable startClass")
 }
+

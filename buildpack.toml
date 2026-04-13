@@ -64,6 +64,18 @@ arch = "arm64"
     description = "a file with arguments to pass to the native-image command"
     build       = true
 
+  [[metadata.configurations]]
+    name        = "BP_INCLUDE_FILES"
+    default     = ""
+    description = "colon-separated list of glob patterns to preserve files in the application directory during bytecode removal. Supports nested paths (e.g., config/app/*)."
+    build       = true
+
+  [[metadata.configurations]]
+    name        = "BP_EXCLUDE_FILES"
+    default     = ""
+    description = "colon-separated list of glob patterns to exclude from the application directory during bytecode removal. When used with BP_INCLUDE_FILES, exclude runs after include. When used alone, removes only matching files."
+    build       = true
+
 [[stacks]]
   id = "*"
 

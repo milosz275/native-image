@@ -36,6 +36,9 @@ const (
 	PlanEntryJVMApplication     = "jvm-application"
 	PlanEntrySpringBoot         = "spring-boot"
 	PlanEntryUpx                = "upx"
+
+	ConfigIncludeFiles = "BP_INCLUDE_FILES"
+	ConfigExcludeFiles = "BP_EXCLUDE_FILES"
 )
 
 type Detect struct {
