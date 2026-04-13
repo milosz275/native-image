@@ -66,7 +66,7 @@ func testNativeImage(t *testing.T, context spec.G, it spec.S) {
 		Expect(os.MkdirAll(filepath.Join(ctx.Application.Path, "META-INF"), 0755)).To(Succeed())
 		Expect(os.WriteFile(filepath.Join(ctx.Application.Path, "META-INF", "MANIFEST.MF"), []byte{}, 0644)).To(Succeed())
 
-		nativeImage, err = native.NewNativeImage(ctx.Application.Path, "test-argument-1 test-argument-2", "", "none", "", "", "", props, ctx.StackID)
+		nativeImage, err = native.NewNativeImage(ctx.Application.Path, "test-argument-1 test-argument-2", "", "none", "", false, "", false, "", props, ctx.StackID)
 		nativeImage.Logger = bard.NewLogger(io.Discard)
 		Expect(err).NotTo(HaveOccurred())
 		nativeImage.Executor = executor
@@ -179,7 +179,7 @@ func testNativeImage(t *testing.T, context spec.G, it spec.S) {
 			Expect(os.MkdirAll(filepath.Join(ctx.Application.Path, "target"), 0755)).To(Succeed())
 			Expect(os.WriteFile(argsFile, []byte(`test-argument-1 test-argument-2`), 0644)).To(Succeed())
 
-			nativeImage, err := native.NewNativeImage(ctx.Application.Path, "", argsFile, "none", "", "", "", props, ctx.StackID)
+			nativeImage, err := native.NewNativeImage(ctx.Application.Path, "", argsFile, "none", "", false, "", false, "", props, ctx.StackID)
 			nativeImage.Logger = bard.NewLogger(io.Discard)
 			Expect(err).NotTo(HaveOccurred())
 			nativeImage.Executor = executor
@@ -207,7 +207,7 @@ func testNativeImage(t *testing.T, context spec.G, it spec.S) {
 
 		it("contributes native image with --force-fallback", func() {
 			executorForceFallback := &mocks.Executor{}
-			nativeImage, err = native.NewNativeImage(ctx.Application.Path, "--force-fallback test-argument-1 test-argument-2", "", "none", "", "", "", props, ctx.StackID)
+			nativeImage, err = native.NewNativeImage(ctx.Application.Path, "--force-fallback test-argument-1 test-argument-2", "", "none", "", false, "", false, "", props, ctx.StackID)
 			nativeImage.Logger = bard.NewLogger(io.Discard)
 			Expect(err).NotTo(HaveOccurred())
 			nativeImage.Executor = executorForceFallback
@@ -252,7 +252,7 @@ func testNativeImage(t *testing.T, context spec.G, it spec.S) {
 
 		it("contributes native image with --auto-fallback", func() {
 			executorAutoFallback := &mocks.Executor{}
-			nativeImage, err = native.NewNativeImage(ctx.Application.Path, "--auto-fallback test-argument-1 test-argument-2", "", "none", "", "", "", props, ctx.StackID)
+			nativeImage, err = native.NewNativeImage(ctx.Application.Path, "--auto-fallback test-argument-1 test-argument-2", "", "none", "", false, "", false, "", props, ctx.StackID)
 			nativeImage.Logger = bard.NewLogger(io.Discard)
 			Expect(err).NotTo(HaveOccurred())
 			nativeImage.Executor = executorAutoFallback
@@ -465,8 +465,11 @@ func testNativeImage(t *testing.T, context spec.G, it spec.S) {
 			Expect(filepath.Join(ctx.Application.Path, "fixture-marker")).ToNot(BeAnExistingFile())
 		})
 
-		it("removes everything when include files is empty", func() {
+		it("removes everything when include and exclude files are unset", func() {
 			nativeImage.IncludeFiles = ""
+			nativeImage.IncludeFilesSet = false
+			nativeImage.ExcludeFiles = ""
+			nativeImage.ExcludeFilesSet = false
 
 			_, err := nativeImage.Contribute(layer)
 			Expect(err).NotTo(HaveOccurred())
@@ -474,6 +477,19 @@ func testNativeImage(t *testing.T, context spec.G, it spec.S) {
 			Expect(filepath.Join(ctx.Application.Path, "BOOT-INF")).ToNot(BeADirectory())
 			Expect(filepath.Join(ctx.Application.Path, "META-INF")).ToNot(BeADirectory())
 			Expect(filepath.Join(ctx.Application.Path, "fixture-marker")).ToNot(BeAnExistingFile())
+			Expect(filepath.Join(ctx.Application.Path, "test-start-class")).To(BeARegularFile())
+		})
+
+		it("preserves all files when include files is explicitly set to empty", func() {
+			nativeImage.IncludeFiles = ""
+			nativeImage.IncludeFilesSet = true
+
+			_, err := nativeImage.Contribute(layer)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(filepath.Join(ctx.Application.Path, "BOOT-INF")).To(BeADirectory())
+			Expect(filepath.Join(ctx.Application.Path, "META-INF")).To(BeADirectory())
+			Expect(filepath.Join(ctx.Application.Path, "fixture-marker")).To(BeAnExistingFile())
 			Expect(filepath.Join(ctx.Application.Path, "test-start-class")).To(BeARegularFile())
 		})
 

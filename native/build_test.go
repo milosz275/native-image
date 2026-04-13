@@ -255,7 +255,9 @@ Start-Class: test-start-class
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(result.Layers[0].(native.NativeImage).IncludeFiles).To(Equal("dynatrace:*.conf"))
+			Expect(result.Layers[0].(native.NativeImage).IncludeFilesSet).To(BeTrue())
 			Expect(result.Layers[0].(native.NativeImage).ExcludeFiles).To(Equal("*.tmp"))
+			Expect(result.Layers[0].(native.NativeImage).ExcludeFilesSet).To(BeTrue())
 		})
 	})
 

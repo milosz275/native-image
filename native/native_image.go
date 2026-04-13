@@ -41,7 +41,9 @@ type NativeImage struct {
 	ArgumentsFile   string
 	Executor        effect.Executor
 	IncludeFiles    string
+	IncludeFilesSet bool
 	ExcludeFiles    string
+	ExcludeFilesSet bool
 	JarFilePattern  string
 	Logger          bard.Logger
 	Manifest        *properties.Properties
@@ -49,14 +51,16 @@ type NativeImage struct {
 	Compressor      string
 }
 
-func NewNativeImage(applicationPath string, arguments string, argumentsFile string, compressor string, includeFiles string, excludeFiles string, jarFilePattern string, manifest *properties.Properties, stackID string) (NativeImage, error) {
+func NewNativeImage(applicationPath string, arguments string, argumentsFile string, compressor string, includeFiles string, includeFilesSet bool, excludeFiles string, excludeFilesSet bool, jarFilePattern string, manifest *properties.Properties, stackID string) (NativeImage, error) {
 	return NativeImage{
 		ApplicationPath: applicationPath,
 		Arguments:       arguments,
 		ArgumentsFile:   argumentsFile,
 		Executor:        effect.NewExecutor(),
 		IncludeFiles:    includeFiles,
+		IncludeFilesSet: includeFilesSet,
 		ExcludeFiles:    excludeFiles,
+		ExcludeFilesSet: excludeFilesSet,
 		JarFilePattern:  jarFilePattern,
 		Manifest:        manifest,
 		StackID:         stackID,
@@ -155,7 +159,16 @@ func (n NativeImage) Contribute(layer libcnb.Layer) (libcnb.Layer, error) {
 		if err := logic.Include(n.ApplicationPath, n.IncludeFiles); err != nil {
 			return libcnb.Layer{}, fmt.Errorf("unable to apply include patterns\n%w", err)
 		}
-	} else if n.ExcludeFiles == "" {
+	}
+
+	if n.ExcludeFiles != "" {
+		n.Logger.Bodyf("Excluding files matching: %s", n.ExcludeFiles)
+		if err := logic.Exclude(n.ApplicationPath, n.ExcludeFiles); err != nil {
+			return libcnb.Layer{}, fmt.Errorf("unable to apply exclude patterns\n%w", err)
+		}
+	}
+
+	if n.IncludeFiles == "" && n.ExcludeFiles == "" && !n.IncludeFilesSet && !n.ExcludeFilesSet {
 		cs, err := os.ReadDir(n.ApplicationPath)
 		if err != nil {
 			return libcnb.Layer{}, fmt.Errorf("unable to list children of %s\n%w", n.ApplicationPath, err)
@@ -165,13 +178,6 @@ func (n NativeImage) Contribute(layer libcnb.Layer) (libcnb.Layer, error) {
 			if err := os.RemoveAll(file); err != nil {
 				return libcnb.Layer{}, fmt.Errorf("unable to remove %s\n%w", file, err)
 			}
-		}
-	}
-
-	if n.ExcludeFiles != "" {
-		n.Logger.Bodyf("Excluding files matching: %s", n.ExcludeFiles)
-		if err := logic.Exclude(n.ApplicationPath, n.ExcludeFiles); err != nil {
-			return libcnb.Layer{}, fmt.Errorf("unable to apply exclude patterns\n%w", err)
 		}
 	}
 

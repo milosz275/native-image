@@ -110,8 +110,8 @@ func (b Build) Build(context libcnb.BuildContext) (libcnb.BuildResult, error) {
 		}
 	}
 
-	includeFiles, _ := cr.Resolve(ConfigIncludeFiles)
-	excludeFiles, _ := cr.Resolve(ConfigExcludeFiles)
+	includeFiles, includeFilesSet := cr.Resolve(ConfigIncludeFiles)
+	excludeFiles, excludeFilesSet := cr.Resolve(ConfigExcludeFiles)
 
 	compressor, ok := cr.Resolve(BinaryCompressionMethod)
 	if !ok {
@@ -123,7 +123,7 @@ func (b Build) Build(context libcnb.BuildContext) (libcnb.BuildResult, error) {
 		}
 	}
 
-	n, err := NewNativeImage(context.Application.Path, args, argsFile, compressor, includeFiles, excludeFiles, jarFilePattern, manifest, context.StackID)
+	n, err := NewNativeImage(context.Application.Path, args, argsFile, compressor, includeFiles, includeFilesSet, excludeFiles, excludeFilesSet, jarFilePattern, manifest, context.StackID)
 	if err != nil {
 		return libcnb.BuildResult{}, fmt.Errorf("unable to create native image layer\n%w", err)
 	}
